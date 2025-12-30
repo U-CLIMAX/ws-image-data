@@ -29,6 +29,52 @@ $uploadMain = Ask "是否上傳原圖到 S3（bucket: $bucket）？"
 $uploadBlur = Ask "是否上傳模糊圖到 S3（bucket: $bucketBlur）？"
 $pushGit = Ask "是否執行 Git 推送？"
 
+# ===== Step 0. Check WebP Count =====
+
+function Get-WebpCount($path) {
+    if (-not (Test-Path $path)) {
+        ErrorMsg "資料夾不存在: $path"
+        exit 1
+    }
+    return (Get-ChildItem -Path $path -Recurse -Filter *.webp -File | Measure-Object).Count
+}
+
+Info "檢查 webp 圖片數量是否一致..."
+
+$mainCount = Get-WebpCount $localFolder
+$blurCount = Get-WebpCount $localBlurFolder
+
+Info "原圖數量: $mainCount"
+Info "模糊圖數量: $blurCount"
+
+if ($mainCount -ne $blurCount) {
+    ErrorMsg "webp 數量不一致，開始執行 generate_blur.py..."
+
+    uv run generate_blur.py
+    if ($LASTEXITCODE -ne 0) {
+        ErrorMsg "generate_blur.py 執行失敗，中斷流程"
+        exit 1
+    }
+
+    Info "重新檢查 webp 圖片數量..."
+
+    $mainCountAfter = Get-WebpCount $localFolder
+    $blurCountAfter = Get-WebpCount $localBlurFolder
+
+    Info "原圖數量（after）: $mainCountAfter"
+    Info "模糊圖數量（after）: $blurCountAfter"
+
+    if ($mainCountAfter -ne $blurCountAfter) {
+        ErrorMsg "webp 數量仍不一致，流程中斷"
+        exit 1
+    }
+
+    Success "webp 數量已一致，繼續執行後續流程"
+} else {
+    Success "webp 數量一致，跳過 generate_blur.py"
+}
+
+
 # ===== Step 1. Sync Main Images =====
 if ($uploadMain -match "^[Yy]$") {
     Info "開始同步原圖到 S3..."
