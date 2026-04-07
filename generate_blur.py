@@ -5,6 +5,9 @@ from PIL import Image, ImageFilter
 SRC = Path("ws-image-data")
 DST = Path("ws-blur-image-data")
 
+# SRC = Path(r"C:\Users\ASUS\Code\web\TCGToolWS\public\series-icons\original")
+# DST = Path(r"C:\Users\ASUS\Code\web\TCGToolWS\public\series-icons\blur")
+
 
 def main():
     if not SRC.exists():
