@@ -10,7 +10,7 @@ $bucketBlur      = "ws-blur-image-data"
 # rclone 共用參數
 $rcloneFlags = @(
     "--transfers", "32",
-    "--checkers", "1000", 
+    "--checkers", "20", 
     "--header-upload", "Cache-Control:public, max-age=31536000, immutable",
     "--progress"
 )
