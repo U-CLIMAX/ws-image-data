@@ -1,17 +1,16 @@
 # ============================================
 # WS Image Sync Script with User Controls
-# (rclone 版本)
 # ============================================
 $localFolder     = "E:\CF_R2\ws-image-data"
 $localBlurFolder = "E:\CF_R2\ws-blur-image-data"
-$remote          = "ws-r2"           # rclone remote 名稱
+$remote          = "ws-r2"
 $bucket          = "ws-image-data"
 $bucketBlur      = "ws-blur-image-data"
 
 # rclone 共用參數
 $rcloneFlags = @(
     "--transfers", "32",
-    "--checkers", "16", 
+    "--checkers", "1000", 
     "--header-upload", "Cache-Control:public, max-age=31536000, immutable",
     "--progress"
 )
