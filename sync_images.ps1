@@ -1,16 +1,18 @@
-# ============================================
+﻿# ============================================
 # WS Image Sync Script with User Controls
 # ============================================
 $localFolder     = "E:\CF_R2\ws-image-data"
 $localBlurFolder = "E:\CF_R2\ws-blur-image-data"
-$remote          = "ws-r2"
+$remoteR2        = "ws-r2"
+$remoteOSS       = "ws-oss"
 $bucket          = "ws-image-data"
 $bucketBlur      = "ws-blur-image-data"
 
 # rclone 共用參數
 $rcloneFlags = @(
     "--transfers", "32",
-    "--checkers", "20", 
+    "--checkers", "20",
+    "--header-upload", "Cache-Control: public, max-age=31536000, immutable",
     "--progress"
 )
 
@@ -23,13 +25,20 @@ function Success($msg) { Write-Host "[OK]   $msg" -ForegroundColor Green }
 function ErrorMsg($msg){ Write-Host "[ERROR] $msg" -ForegroundColor Red }
 
 # ====== User Inputs ======
-$pushGit    = Ask "是否執行 Git 推送？"
-$uploadMain = Ask "是否上傳原圖到 R2（bucket: $bucket）？"
-$uploadBlur = Ask "是否上傳模糊圖到 R2（bucket: $bucketBlur）？"
+$pushGit       = Ask "是否執行 Git 推送？"
+$uploadR2Main  = Ask "是否上傳原圖到 R2（${remoteR2}:${bucket}）？"
+$uploadR2Blur  = Ask "是否上傳模糊圖到 R2（${remoteR2}:${bucketBlur}）？"
+$uploadOSSMain = Ask "是否上傳原圖到阿里雲 OSS（${remoteOSS}:${bucket}）？"
+$uploadOSSBlur = Ask "是否上傳模糊圖到阿里雲 OSS（${remoteOSS}:${bucketBlur}）？"
 
 # 上傳模式選擇
 $uploadMode = ""
-if ($uploadMain -match "^[Yy]$" -or $uploadBlur -match "^[Yy]$") {
+$needUpload = ($uploadR2Main -match "^[Yy]$") -or
+              ($uploadR2Blur -match "^[Yy]$") -or
+              ($uploadOSSMain -match "^[Yy]$") -or
+              ($uploadOSSBlur -match "^[Yy]$")
+
+if ($needUpload) {
     Write-Host "選擇上傳模式：" -ForegroundColor Yellow
     Write-Host "  [1] 快速模式 - 只傳新增檔案，忽略遠端已存在的（ignore-existing）" -ForegroundColor White
     Write-Host "  [2] 完整同步 - 同步本地與遠端，刪除遠端多餘檔案（sync）" -ForegroundColor White
@@ -102,18 +111,32 @@ function Invoke-Upload($label, $localPath, $remotePath) {
     }
 }
 
-# ===== Step 2. Upload Main Images =====
-if ($uploadMain -match "^[Yy]$") {
-    Invoke-Upload "原圖" $localFolder "${remote}:${bucket}"
+# ===== Step 2. Upload Main Images to R2 =====
+if ($uploadR2Main -match "^[Yy]$") {
+    Invoke-Upload "R2 原圖" $localFolder "${remoteR2}:${bucket}"
 } else {
-    Info "跳過原圖上傳。"
+    Info "跳過 R2 原圖上傳。"
 }
 
-# ===== Step 3. Upload Blur Images =====
-if ($uploadBlur -match "^[Yy]$") {
-    Invoke-Upload "模糊圖" $localBlurFolder "${remote}:${bucketBlur}"
+# ===== Step 3. Upload Blur Images to R2 =====
+if ($uploadR2Blur -match "^[Yy]$") {
+    Invoke-Upload "R2 模糊圖" $localBlurFolder "${remoteR2}:${bucketBlur}"
 } else {
-    Info "跳過模糊圖上傳。"
+    Info "跳過 R2 模糊圖上傳。"
+}
+
+# ===== Step 4. Upload Main Images to OSS =====
+if ($uploadOSSMain -match "^[Yy]$") {
+    Invoke-Upload "OSS 原圖" $localFolder "${remoteOSS}:${bucket}"
+} else {
+    Info "跳過 OSS 原圖上傳。"
+}
+
+# ===== Step 5. Upload Blur Images to OSS =====
+if ($uploadOSSBlur -match "^[Yy]$") {
+    Invoke-Upload "OSS 模糊圖" $localBlurFolder "${remoteOSS}:${bucketBlur}"
+} else {
+    Info "跳過 OSS 模糊圖上傳。"
 }
 
 Success "全部作業流程完成!"
